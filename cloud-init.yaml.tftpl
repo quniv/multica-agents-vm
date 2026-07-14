@@ -1,0 +1,36 @@
+#cloud-config
+hostname: ${hostname}
+manage_etc_hosts: true
+package_update: false
+package_upgrade: false
+disable_root: true
+ssh_pwauth: false
+ssh_deletekeys: true
+ssh_genkeytypes:
+  - ed25519
+  - rsa
+users:
+  - name: ubuntu
+    gecos: Ubuntu
+    primary_group: ubuntu
+    groups:
+      - adm
+      - sudo
+    shell: /bin/bash
+    lock_passwd: true
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+write_files:
+  - path: /etc/ssh/sshd_config.d/00-agent-vm-hardening.conf
+    owner: root:root
+    permissions: "0644"
+    content: |
+      PubkeyAuthentication yes
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      ChallengeResponseAuthentication no
+      PermitRootLogin no
+      AuthenticationMethods publickey
+runcmd:
+  - systemctl reload ssh
