@@ -9,6 +9,10 @@ export default defineConfig({
 			title: 'Multica Agent Knowledge Base',
 			sidebar: [
 				{
+					label: 'Operations & Security',
+					items: [{ autogenerate: { directory: 'operations-security' } }],
+				},
+				{
 					label: 'Skills',
 					items: [{ autogenerate: { directory: 'skills' } }],
 				},
