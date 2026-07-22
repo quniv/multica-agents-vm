@@ -6,7 +6,7 @@ terraform {
       source = "dmacvicar/libvirt"
       # The 0.8 series exposes the stable libvirt_domain, libvirt_volume, and
       # libvirt_cloudinit_disk resource model used by this configuration.
-      version = "~> 0.8.3"
+      version = "~> 0.9.0"
     }
   }
 }
