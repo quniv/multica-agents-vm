@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   sync-skills:
-    name: Import skills
+    name: Sync skills
     runs-on:
       - self-hosted
     steps:
@@ -22,21 +22,42 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Import top-level skills
+      - name: Sync top-level skills
         shell: bash
         env:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           set -Eeuo pipefail
 
-          mapfile -d '' skill_files < <(
-            find skills -mindepth 2 -maxdepth 2 -type f -name SKILL.md -print0 \
-              | sort -z
+          repository_name="${GITHUB_REPOSITORY#*/}"
+
+          while IFS=$'\t' read -r skill_id skill_path; do
+            if [[ ! -f "${skill_path}/SKILL.md" ]]; then
+              echo "Deleting ${skill_path}; it no longer exists at ${SOURCE_COMMIT}"
+              multica skill delete "${skill_id}" --yes
+            fi
+          done < <(
+            multica skill list --output json \
+              | jq -r \
+                --arg owner "${GITHUB_REPOSITORY_OWNER}" \
+                --arg repo "${repository_name}" \
+                '.[]
+                  | select(
+                      .config.origin.type == "github"
+                      and .config.origin.owner == $owner
+                      and .config.origin.repo == $repo
+                      and ((.config.origin.path? // "") | test("^skills/[^/]+$"))
+                    )
+                  | [.id, .config.origin.path]
+                  | @tsv'
           )
 
-          if (( ${#skill_files[@]} == 0 )); then
-            echo "No top-level skills/*/SKILL.md files found." >&2
-            exit 1
+          skill_files=()
+          if [[ -d skills ]]; then
+            mapfile -d '' skill_files < <(
+              find skills -mindepth 2 -maxdepth 2 -type f -name SKILL.md -print0 \
+                | sort -z
+            )
           fi
 
           for skill_file in "${skill_files[@]}"; do
