@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Documenting"
+  short_description: "Maintain numbered project docs under agent-docs"
+  default_prompt: "Use $project-documenting to maintain concise project documentation under agent-docs using numbered topic folders and synchronized indexes."
