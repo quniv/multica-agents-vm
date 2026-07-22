@@ -1,0 +1,57 @@
+name: Sync skills to Multica
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - skills/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync-skills:
+    name: Import skills
+    runs-on:
+      - self-hosted
+    env:
+      MULTICA_TOKEN: ${{ secrets.MULTICA_TOKEN }}
+      MULTICA_WORKSPACE_ID: ${{ secrets.MULTICA_WORKSPACE_ID }}
+      MULTICA_SERVER_URL: ${{ secrets.MULTICA_SERVER_URL }}
+    steps:
+      - name: Check out triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Import top-level skills
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+
+          : "${MULTICA_TOKEN:?The MULTICA_TOKEN repository secret is required}"
+          : "${MULTICA_WORKSPACE_ID:?The MULTICA_WORKSPACE_ID repository secret is required}"
+
+          mapfile -d '' skill_files < <(
+            find skills -mindepth 2 -maxdepth 2 -type f -name SKILL.md -print0 \
+              | sort -z
+          )
+
+          if (( ${#skill_files[@]} == 0 )); then
+            echo "No top-level skills/*/SKILL.md files found." >&2
+            exit 1
+          fi
+
+          for skill_file in "${skill_files[@]}"; do
+            skill_dir="${skill_file%/SKILL.md}"
+            import_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/${SOURCE_COMMIT}/${skill_dir}"
+
+            echo "Importing ${skill_dir} from ${SOURCE_COMMIT}"
+            multica skill import \
+              --url "${import_url}" \
+              --on-conflict fail
+          done
